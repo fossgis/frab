@@ -4,7 +4,10 @@ class Event < ActiveRecord::Base
 
   before_create :generate_guid
 
-  TYPES = [:lecture, :workshop, :podium, :lightning_talk, :meeting, :film, :concert, :djset, :performance, :other]
+  # fix hack to load types from events
+  # next step load from conference settings
+  # TYPES = [:lecture, :workshop, :podium, :lightning_talk, :meeting, :film, :concert, :djset, :performance, :other]
+  TYPES = [:lecture, :workshop, :lightning_talk]
 
   has_one :ticket, dependent: :destroy
   has_many :conflicts_as_conflicting, class_name: "Conflict", foreign_key: "conflicting_event_id", dependent: :destroy
