@@ -11,8 +11,8 @@
     %legend= t("cfp.contact_data")
     = f.input :email, :hint => t("cfp.email_hint")
     = f.input :email_public, as: :inline_boolean, :hint => t("cfp.email_public_hint")
-    = dynamic_association :phone_numbers, t("cfp.phone_numbers"), f
-    = dynamic_association :im_accounts, t("cfp.im_accounts"), f
+    / = dynamic_association :phone_numbers, t("cfp.phone_numbers"), f
+    / = dynamic_association :im_accounts, t("cfp.im_accounts"), f
   %fieldset.inputs
     %legend= t("cfp.bio")
     = f.input :abstract, :input_html => {:rows => 4}, :hint => t("cfp.abstract_hint")
