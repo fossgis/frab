@@ -3,10 +3,11 @@
     .pull-right
       - unless @conference.in_the_past
         = action_button "primary", t("cfp.submit_new_event"), new_cfp_event_path
-        - if @person.availabilities_in(@conference).count == 0
-          = action_button "", t("cfp.edit_availability"), new_cfp_person_availability_path
-        - else
-          = action_button "", t("cfp.edit_availability"), edit_cfp_person_availability_path
+        - if @conference.specify_availability?
+          - if @person.availabilities_in(@conference).count == 0
+            = action_button "", t("cfp.edit_availability"), new_cfp_person_availability_path
+          - else
+            = action_button "", t("cfp.edit_availability"), edit_cfp_person_availability_path
       = action_button "", t("cfp.edit_profile"), edit_cfp_person_path
       = action_button "", t("cfp.edit_account"), edit_cfp_user_path
     %h1=t("cfp.welcome")
@@ -16,7 +17,7 @@
       - if cfp_hard_deadline_over?
         %p=t("cfp.hard_deadline_over")
       - elsif @person.events_in(@conference).size > 0 and not @conference.in_the_past
-        - if @person.availabilities_in(@conference).count == 0
+        - if @conference.specify_availability? and @person.availabilities_in(@conference).count == 0
           %p=t("cfp.specify_availability")
           = action_button "success", t("cfp.edit_availability"), new_cfp_person_availability_path
           .clear

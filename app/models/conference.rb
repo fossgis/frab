@@ -175,6 +175,12 @@ class Conference < ActiveRecord::Base
     true
   end
 
+  # TODO save specify_availability or not to database
+  # for this conference we disable it hard
+  def specify_availability?
+    return false
+  end
+
   def get_ticket_module
     if self.ticket_type == 'otrs'
       return OtrsTickets
