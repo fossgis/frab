@@ -4,6 +4,7 @@
 #
 Frab::Application.config.session_store :cookie_store,
                                       key: '_frab_session',
-                                      secure: Rails.env == 'production',
+                                      # dont use it in first set until we have ssl
+                                      # secure: Rails.env == 'production',
                                       httponly: true,
                                       expire_after: 60.minutes
