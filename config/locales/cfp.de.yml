@@ -33,7 +33,7 @@ de:
     event_abstract_hint: "Kurze Beschreibung mit ca. 1500 Zeichen, der Ihren Vorschlag prägnant beschreibt. (HTML)"
     event_confirmed: "Event bestätigt"
     event_created_notice: "Vorschlag wurde eingereicht."
-    event_description_hint: "Kurze Beschreibung für das Programmheft."
+    event_description_hint: "Kurze Beschreibung für das Programmheft. 250 Zeichen."
     event_submission_note: "Weiterführende Information zum Beispiel für die Programmplanung"
     event_track_hint: "Wenn möglich, ordnen Sie Ihren Vortrag einem Themenbereich zu."
 

@@ -11,7 +11,7 @@
   %fieldset.inputs
     %legend= t("cfp.detailed_description")
     = f.input :abstract, :input_html => {:rows => 10}, :hint => t("cfp.event_abstract_hint")
-    = f.input :description, :input_html => {:rows => 3}, :hint => t("cfp.event_description_hint")
+    = f.input :description, :input_html => {:rows => 3}, :maxlength => 250, :hint => t("cfp.event_description_hint")
     = f.input :submission_note, :hint => t("cfp.event_submission_note")
     = dynamic_association :links, t("cfp.links"), f
     = dynamic_association :event_attachments, t("cfp.uploaded_files"), f

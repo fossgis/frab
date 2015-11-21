@@ -2,7 +2,7 @@
   .page-header
     %h1
       = @conference.title
-      t("cfp.sign_up")
+      Sign Up
   .row
     .span16
       = simple_form_for(@user, url: cfp_user_path) do |f|
