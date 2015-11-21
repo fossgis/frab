@@ -19,6 +19,11 @@
         %p=t("cfp.welcome_text", :title => @conference.title)
   .row
     .span8
+      %h2=t("cfp.sign_up_headline")
+      %p=t("cfp.sign_up_description", :title => @conference.title)
+      %p= action_button "", t("cfp.sign_up"), new_cfp_user_path
+
+    .span8
       %h2=t("cfp.login_existing_headline")
       %p=t("cfp.login_existing_description")
       = simple_form_for @user, url: cfp_session_path do |f|
@@ -29,16 +34,12 @@
             = f.input :remember_me, as: :inline_boolean
         .actions
           = f.button :submit, t("cfp.sign_in"), class: 'primary'
-    .span8
-      %h2=t("cfp.sign_up_headline")
-      %p=t("cfp.sign_up_description", :title => @conference.title)
-      %p= action_button "", t("cfp.sign_up"), new_cfp_user_path
-  .row
-    .span8
-      %h2=t("cfp.forgot_password_headline")
+
+      %h5=t("cfp.forgot_password_headline")
       %p=t("cfp.forgot_password_description")
       = action_button "", t("cfp.forgot_password_button"), new_cfp_user_password_path
-    .span8
-      %h2=t("cfp.confirmation_headline")
+
+      %h5=t("cfp.confirmation_headline")
       %p=t("cfp.confirmation_description")
       = action_button "", t("cfp.confirmation_button"), new_cfp_user_confirmation_path
+
