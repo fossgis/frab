@@ -55,7 +55,7 @@ de:
     lecture: "Vortrag"
     lightning_talk: "Lightning Talk"
     male: "männlich"
-    meeting: "Meeting"
+    meeting: "Anwendertreffen"
     mobile: "Mobil"
     other: "Andere"
     performance: "Theater/Performance"
@@ -75,7 +75,7 @@ de:
       short_datetime: '%d. %H:%M'
       time: '%H:%M'
     time_range_seperator: ' bis '
-      
+
   date:
     formats:
       only_day: "%e"
@@ -131,9 +131,9 @@ de:
         precision: 1
       decimal_units:
         units:
-          billion: 
+          billion:
             others: Milliarden
-          quadrillion: 
+          quadrillion:
             others: Billiarden
 
   support:
@@ -154,7 +154,7 @@ de:
       too_long: "ist zu lang (nicht mehr als %{count} Zeichen)"
       too_short: "ist zu kurz (nicht weniger als %{count} Zeichen)"
       wrong_length: "hat die falsche Länge (muss genau %{count} Zeichen haben)"
-      
+
   activerecord:
     errors:
       template:
@@ -163,7 +163,7 @@ de:
           other:  "Konnte %{model} nicht speichern: %{count} Fehler."
         body: "Bitte überprüfen Sie die folgenden Felder:"
 
-      messages:        
+      messages:
         taken: "ist bereits vergeben"
         record_invalid: "Gültigkeitsprüfung ist fehlgeschlagen: %{errors}"
         <<: *errors_messages
