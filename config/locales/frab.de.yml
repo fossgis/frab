@@ -255,5 +255,5 @@ de:
 
   mailers:
     user_mailer:
-      confirmation_instructions: "Account aktivieren"
-      password_reset_instructions: "Password zurücksetzen"
+      confirmation_instructions: "FOSSGIS-Konferenz – Account aktivieren"
+      password_reset_instructions: "FOSSGIS-Konferenz – Password zurücksetzen"
