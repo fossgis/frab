@@ -68,7 +68,8 @@ $ ->
     $(this).find("a.close").remove()
     return
   )
-  $("body").delegate("div.event", "click", (click_event) ->
+
+  $("body").delegate("table.room div.event", "click", (click_event) ->
     click_event.stopPropagation()
     click_event.preventDefault()
     false
