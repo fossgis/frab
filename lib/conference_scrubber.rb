@@ -1,7 +1,7 @@
 class ConferenceScrubber
   include RakeLogger
 
-  DUMMY_MAIL = "root@localhost.localdomain"
+  DUMMY_MAIL = 'root@localhost.localdomain'
 
   def initialize(conference, dry_run = false)
     @conference = conference
@@ -30,7 +30,14 @@ class ConferenceScrubber
   end
 
   def last_years_conferences
-    Conference.all.select { |c| c.first_day.date.since(1.year) > Time.now }
+    Conference.all.select do |c|
+      date = if c.first_day
+               c.first_day.date
+             else
+               c.updated_at
+             end
+      date.since(1.year) > Time.now
+    end
   end
 
   def still_active(person)

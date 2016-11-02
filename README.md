@@ -35,7 +35,7 @@ frab is a pretty standard Ruby on Rails (version 4.2) application.
 There should be plenty of tutorials online on how to install,
 deploy and setup these.
 
-Basically, to get started you need git, ruby (>= 2.2) and bundler
+Basically, to get started you need git, ruby (>= 2.3) and bundler
 and follow these steps:
 
 1) Install nodejs:
@@ -120,9 +120,13 @@ To start frab in the production environment run
 
     RACK_ENV=production bundle rails s
 
+Note that when seeding the database in production mode, the password for
+admin@example.org will be a random one. It will be printed to the console
+in when `rake db:seed` is invoked.
+
 ## Ticket Server
 
-frab supports OTRS and RT ticket servers. Instead of sending
+frab supports OTRS, RT and Redmine ticket servers. Instead of sending
 event acceptance/rejection mails directly to submitters, frab adds
 a ticket to a request tracker.
 
@@ -164,6 +168,19 @@ out, checkout the code at the revision the script was last
 changed at and upgrade the code and migrate the database
 from there.
 
+### Create fake data
+
+For development, it might be helpful to have some fake data around that allows for better testing.
+The following command will create a bunch of tracks, persons and events in a random existing
+conference. Call it multiple times if you need more records.
+
+    rake frab:add_fake_data
+
+You may also call the following tasks manually.
+
+    rake frab:add_fake_tracks
+    rake frab:add_fake_persons
+    rake frab:add_fake_events
 
 ## Vagrant Server
 

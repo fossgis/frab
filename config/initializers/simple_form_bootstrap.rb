@@ -20,7 +20,7 @@ SimpleForm.setup do |config|
     # TODO * not shown on password field
     b.wrapper tag: 'div', class: 'input' do |ba|
       ba.use :input
-      ba.use :hint,  wrap_with: { tag: :span, class: 'help-block' }
+      ba.use :hint, wrap_with: { tag: :span, class: 'help-block' }
     end
   end
 
@@ -32,9 +32,20 @@ SimpleForm.setup do |config|
     # TODO right align, margin, missing ul<li
     b.wrapper tag: 'div', class: 'input' do |ba|
       ba.use :input
-      ba.use :hint,  wrap_with: { tag: :span, class: 'help-block' }
+      ba.use :hint, wrap_with: { tag: :span, class: 'help-block' }
     end
+  end
 
+  config.wrappers :check_boxes, tag: 'div', class: 'inputs-list clearfix', error_class: 'has-error' do |b|
+    b.use :html5
+    b.optional :readonly
+    b.use :label
+    b.use :error, wrap_with: { tag: :span, class: :error }
+
+    b.wrapper tag: 'div', class: 'input' do |ba|
+      ba.use :input, wrap_with: { tag: :div, class: 'clearfix' }
+      ba.use :hint, wrap_with: { tag: :span, class: 'help-block' }
+    end
   end
 
   config.default_wrapper = :horizontal_string
@@ -44,6 +55,7 @@ SimpleForm.setup do |config|
     inline_boolean: :horizontal_boolean,
     email: :horizontal_string,
     rating: :horizontal,
+    check_boxes: :check_boxes,
     hidden: :horizontal
   }
 end

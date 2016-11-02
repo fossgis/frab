@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150920130550) do
+ActiveRecord::Schema.define(version: 20160923195521) do
 
   create_table "availabilities", force: :cascade do |t|
     t.integer  "person_id"
@@ -84,9 +84,14 @@ ActiveRecord::Schema.define(version: 20150920130550) do
     t.text     "schedule_custom_css",       limit: 2097152
     t.text     "schedule_html_intro",       limit: 2097152
     t.string   "default_recording_license", limit: 255
+    t.boolean  "expenses_enabled",                          default: false,        null: false
+    t.boolean  "transport_needs_enabled",                   default: false,        null: false
+    t.integer  "parent_id"
+    t.boolean  "bulk_notification_enabled",                 default: false,        null: false
   end
 
   add_index "conferences", ["acronym"], name: "index_conferences_on_acronym"
+  add_index "conferences", ["parent_id"], name: "index_conferences_on_parent_id"
 
   create_table "conflicts", force: :cascade do |t|
     t.integer  "event_id"
@@ -134,14 +139,16 @@ ActiveRecord::Schema.define(version: 20150920130550) do
   add_index "event_feedbacks", ["event_id"], name: "index_event_feedbacks_on_event_id"
 
   create_table "event_people", force: :cascade do |t|
-    t.integer  "event_id",                                             null: false
-    t.integer  "person_id",                                            null: false
-    t.string   "event_role",         limit: 255, default: "submitter", null: false
-    t.string   "role_state",         limit: 255
-    t.string   "comment",            limit: 255
-    t.datetime "created_at",                                           null: false
-    t.datetime "updated_at",                                           null: false
-    t.string   "confirmation_token", limit: 255
+    t.integer  "event_id",                                               null: false
+    t.integer  "person_id",                                              null: false
+    t.string   "event_role",           limit: 255, default: "submitter", null: false
+    t.string   "role_state",           limit: 255
+    t.string   "comment",              limit: 255
+    t.datetime "created_at",                                             null: false
+    t.datetime "updated_at",                                             null: false
+    t.string   "confirmation_token",   limit: 255
+    t.string   "notification_subject", limit: 255
+    t.text     "notification_body"
   end
 
   add_index "event_people", ["event_id"], name: "index_event_people_on_event_id"
@@ -192,15 +199,28 @@ ActiveRecord::Schema.define(version: 20150920130550) do
     t.integer  "number_of_repeats",                           default: 1
     t.text     "other_locations"
     t.text     "methods"
-    t.text     "resources"
     t.text     "target_audience_experience"
     t.text     "target_audience_experience_text"
+    t.text     "tech_rider"
   end
 
   add_index "events", ["conference_id"], name: "index_events_on_conference_id"
   add_index "events", ["event_type"], name: "index_events_on_type"
   add_index "events", ["guid"], name: "index_events_on_guid", unique: true
   add_index "events", ["state"], name: "index_events_on_state"
+
+  create_table "expenses", force: :cascade do |t|
+    t.string   "name"
+    t.decimal  "value"
+    t.boolean  "reimbursed"
+    t.integer  "person_id"
+    t.integer  "conference_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "expenses", ["conference_id"], name: "index_expenses_on_conference_id"
+  add_index "expenses", ["person_id"], name: "index_expenses_on_person_id"
 
   create_table "im_accounts", force: :cascade do |t|
     t.integer  "person_id"
@@ -233,15 +253,28 @@ ActiveRecord::Schema.define(version: 20150920130550) do
 
   add_index "links", ["linkable_id"], name: "index_links_on_linkable_id"
 
+  create_table "mail_templates", force: :cascade do |t|
+    t.integer  "conference_id"
+    t.string   "name"
+    t.string   "subject"
+    t.text     "content"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "mail_templates", ["conference_id"], name: "index_mail_templates_on_conference_id"
+
   create_table "notifications", force: :cascade do |t|
-    t.datetime "created_at",                 null: false
-    t.datetime "updated_at",                 null: false
-    t.string   "locale",         limit: 255
-    t.string   "accept_subject", limit: 255
-    t.string   "reject_subject", limit: 255
+    t.datetime "created_at",                   null: false
+    t.datetime "updated_at",                   null: false
+    t.string   "locale",           limit: 255
+    t.string   "accept_subject",   limit: 255
+    t.string   "reject_subject",   limit: 255
     t.text     "accept_body"
     t.text     "reject_body"
     t.integer  "conference_id"
+    t.string   "schedule_subject", limit: 255
+    t.text     "schedule_body"
   end
 
   create_table "people", force: :cascade do |t|
@@ -278,13 +311,12 @@ ActiveRecord::Schema.define(version: 20150920130550) do
   add_index "phone_numbers", ["person_id"], name: "index_phone_numbers_on_person_id"
 
   create_table "rooms", force: :cascade do |t|
-    t.integer  "conference_id",                            null: false
-    t.string   "name",          limit: 255,                null: false
+    t.integer  "conference_id",             null: false
+    t.string   "name",          limit: 255, null: false
     t.integer  "size"
-    t.datetime "created_at",                               null: false
-    t.datetime "updated_at",                               null: false
+    t.datetime "created_at",                null: false
+    t.datetime "updated_at",                null: false
     t.integer  "rank"
-    t.boolean  "public",                    default: true
   end
 
   add_index "rooms", ["conference_id"], name: "index_rooms_on_conference_id"
@@ -310,13 +342,14 @@ ActiveRecord::Schema.define(version: 20150920130550) do
   end
 
   create_table "tickets", force: :cascade do |t|
-    t.integer  "event_id",                     null: false
+    t.integer  "object_id",                    null: false
     t.string   "remote_ticket_id", limit: 255
     t.datetime "created_at",                   null: false
     t.datetime "updated_at",                   null: false
+    t.string   "object_type"
   end
 
-  add_index "tickets", ["event_id"], name: "index_tickets_on_event_id"
+  add_index "tickets", ["object_id"], name: "index_tickets_on_object_id"
 
   create_table "tracks", force: :cascade do |t|
     t.integer  "conference_id"
@@ -327,6 +360,21 @@ ActiveRecord::Schema.define(version: 20150920130550) do
   end
 
   add_index "tracks", ["conference_id"], name: "index_tracks_on_conference_id"
+
+  create_table "transport_needs", force: :cascade do |t|
+    t.integer  "person_id"
+    t.integer  "conference_id"
+    t.datetime "at"
+    t.string   "transport_type"
+    t.integer  "seats"
+    t.boolean  "booked"
+    t.text     "note"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "transport_needs", ["conference_id"], name: "index_transport_needs_on_conference_id"
+  add_index "transport_needs", ["person_id"], name: "index_transport_needs_on_person_id"
 
   create_table "users", force: :cascade do |t|
     t.string   "email",                limit: 255, default: "",          null: false

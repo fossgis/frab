@@ -2,8 +2,8 @@ require 'test_helper'
 
 class Cfp::PeopleControllerTest < ActionController::TestCase
   setup do
-    @cfp_person = FactoryGirl.create(:person)
-    @call_for_participation = FactoryGirl.create(:call_for_participation)
+    @cfp_person = create(:person)
+    @call_for_participation = create(:call_for_participation)
     @conference = @call_for_participation.conference
     login_as(:submitter)
   end
@@ -12,14 +12,14 @@ class Cfp::PeopleControllerTest < ActionController::TestCase
     @cfp_person.attributes.except(*%w(id avatar_file_name avatar_content_type avatar_file_size avatar_updated_at created_at updated_at user_id note))
   end
 
-  test "should get new" do
+  test 'should get new' do
     get :new, conference_acronym: @conference.acronym
     assert_response :success
   end
 
-  test "should create cfp_person" do
+  test 'should create cfp_person' do
     # can't have two persons on one user, so delete the one from login_as
-    user = FactoryGirl.create(
+    user = create(
       :user,
       role: 'submitter'
     )
@@ -34,12 +34,12 @@ class Cfp::PeopleControllerTest < ActionController::TestCase
     assert_response :redirect
   end
 
-  test "should get edit" do
+  test 'should get edit' do
     get :edit, conference_acronym: @conference.acronym
     assert_response :success
   end
 
-  test "should update cfp_person" do
+  test 'should update cfp_person' do
     put :update, id: @cfp_person.id, person: cfp_person_params, conference_acronym: @conference.acronym
     assert_response :redirect
   end

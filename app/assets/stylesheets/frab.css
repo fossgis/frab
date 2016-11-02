@@ -116,6 +116,7 @@ table.room tr.even {background: #EEEEEE;}
 span.right { float: right; }
 
 td.buttons { white-space: nowrap; }
+td.nowrap { white-space: nowrap; }
 
 a.assoc {
   margin-left: 150px;
@@ -160,4 +161,10 @@ p.availability span {
 
 .dl-horizontal dd {
     margin-left: 180px;
+}
+
+.info-block {
+    background-color: #ddd;
+    border-radius: 5px;
+    padding: 0.2em;
 }

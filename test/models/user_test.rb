@@ -1,8 +1,8 @@
 require 'test_helper'
 
 class UserTest < ActiveSupport::TestCase
-  test "logins can be recorded" do
-    user = FactoryGirl.create(:user)
+  test 'logins can be recorded' do
+    user = create(:user)
     assert_equal 0, user.sign_in_count
     assert_nil user.last_sign_in_at
     user.record_login!
@@ -11,13 +11,13 @@ class UserTest < ActiveSupport::TestCase
     assert_not_nil user.last_sign_in_at
   end
 
-  test "create admin user" do
-    user = FactoryGirl.create(:admin_user)
-    assert_equal "admin", user.role
+  test 'create admin user' do
+    user = create(:admin_user)
+    assert_equal 'admin', user.role
   end
 
-  test "create crew user" do
-    user = FactoryGirl.create(:crew_user)
-    assert_equal "crew", user.role
+  test 'create crew user' do
+    user = create(:crew_user)
+    assert_equal 'crew', user.role
   end
 end

@@ -2,6 +2,7 @@ pt-BR:
   time:
     formats:
       time: "%H:%M"
+      day: "%A"
 
   public:
     schedule:
@@ -13,6 +14,7 @@ pt-BR:
         index: "Índice"
         schedule: "Programação"
         speakers: "Palestrantes"
+        qrcode: "QR-Code"
 
       index:
         day: "Dia %{index} – %{label}"

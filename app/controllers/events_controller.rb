@@ -8,13 +8,33 @@ class EventsController < ApplicationController
   def index
     authorize! :read, Event
 
-    result = search @conference.events.includes(:track), params
-    @events = result.paginate page: page_param
+    @events = search @conference.events.includes(:track), params
 
     clean_events_attributes
     respond_to do |format|
-      format.html # index.html.erb
+      format.html {
+        @events = @events.paginate page: page_param
+      }
       format.xml  { render xml: @events }
+      format.json { render json: @events }
+    end
+  end
+
+  def export_accepted
+    authorize! :read, Event
+    @events = @conference.events.is_public.accepted
+
+    respond_to do |format|
+      format.json { render :export }
+    end
+  end
+
+  def export_confirmed
+    authorize! :read, Event
+    @events = @conference.events.is_public.confirmed
+
+    respond_to do |format|
+      format.json { render :export }
     end
   end
 
@@ -51,11 +71,11 @@ class EventsController < ApplicationController
 
     # total ratings:
     @events_total = @conference.events.count
-    @events_reviewed_total = @conference.events.to_a.count { |e| !e.event_ratings_count.nil? and e.event_ratings_count > 0 }
+    @events_reviewed_total = @conference.events.to_a.count { |e| !e.event_ratings_count.nil? && e.event_ratings_count > 0 }
     @events_no_review_total = @events_total - @events_reviewed_total
 
     # current_user rated:
-    @events_reviewed = @conference.events.joins(:event_ratings).where("event_ratings.person_id" => current_user.person.id).count
+    @events_reviewed = @conference.events.joins(:event_ratings).where('event_ratings.person_id' => current_user.person.id).count
     @events_no_review = @events_total - @events_reviewed
   end
 
@@ -71,7 +91,7 @@ class EventsController < ApplicationController
     authorize! :create, EventRating
     ids = Event.ids_by_least_reviewed(@conference, current_user.person)
     if ids.empty?
-      redirect_to action: "ratings", notice: "You have already reviewed all events:"
+      redirect_to action: 'ratings', notice: 'You have already reviewed all events:'
     else
       session[:review_ids] = ids
       redirect_to event_event_rating_path(event_id: ids.first)
@@ -88,6 +108,7 @@ class EventsController < ApplicationController
     respond_to do |format|
       format.html # show.html.erb
       format.xml  { render xml: @event }
+      format.json { render json: @event }
     end
   end
 
@@ -103,6 +124,7 @@ class EventsController < ApplicationController
   def new
     authorize! :crud, Event
     @event = Event.new
+    @start_time_options = @conference.start_times_by_day
 
     respond_to do |format|
       format.html # new.html.erb
@@ -113,11 +135,15 @@ class EventsController < ApplicationController
   def edit
     @event = Event.find(params[:id])
     authorize! :update, @event
+
+    @start_time_options = @event.possible_start_times
   end
 
   # GET /events/2/edit_people
   def edit_people
     @event = Event.find(params[:id])
+    @persons = Person.fullname_options
+
     authorize! :update, @event
   end
 
@@ -131,7 +157,8 @@ class EventsController < ApplicationController
       if @event.save
         format.html { redirect_to(@event, notice: 'Event was successfully created.') }
       else
-        format.html { render action: "new" }
+        @start_time_options = @conference.start_times_by_day
+        format.html { render action: 'new' }
       end
     end
   end
@@ -146,8 +173,9 @@ class EventsController < ApplicationController
         format.html { redirect_to(@event, notice: 'Event was successfully updated.') }
         format.js   { head :ok }
       else
-        format.html { render action: "edit" }
-        format.js  { render json: @event.errors, status: :unprocessable_entity }
+        @start_time_options = @event.possible_start_times
+        format.html { render action: 'edit' }
+        format.js { render json: @event.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -165,18 +193,40 @@ class EventsController < ApplicationController
         return redirect_to edit_conference_path, alert: 'No notification text present. Please change the default text for your needs, before accepting/ rejecting events.'
       end
 
-      return redirect_to(@event, alert: "Cannot send mails: Please specify an email address for this conference.") unless @conference.email
+      return redirect_to(@event, alert: 'Cannot send mails: Please specify an email address for this conference.') unless @conference.email
 
-      return redirect_to(@event, alert: "Cannot send mails: Not all speakers have email addresses.") unless @event.speakers.all?(&:email)
+      return redirect_to(@event, alert: 'Cannot send mails: Not all speakers have email addresses.') unless @event.speakers.all?(&:email)
     end
 
     begin
       @event.send(:"#{params[:transition]}!", send_mail: params[:send_mail], coordinator: current_user.person)
     rescue => ex
-      return redirect_to(@event, alert: "Cannot send mails: #{ex}.")
+      return redirect_to(@event, alert: "Cannot update state: #{ex}.")
     end
 
     redirect_to @event, notice: 'Event was successfully updated.'
+  end
+
+  # add custom notifications to all the event's speakers
+  # POST /events/2/custom_notification
+  def custom_notification
+    @event = Event.find(params[:id])
+    authorize! :update, @event
+
+    case @event.state
+    when 'accepting'
+      state = 'accept'
+    when 'rejecting'
+      state = 'reject'
+    when 'confirmed'
+      state = 'schedule'
+    else
+      return redirect_to(@event, alert: "Event not in a notifiable state.")
+    end
+
+    @event.event_people.presenter.each{ |p| p.set_default_notification(state) }
+
+    redirect_to edit_people_event_path(@event)
   end
 
   # DELETE /events/1
@@ -203,10 +253,19 @@ class EventsController < ApplicationController
   end
 
   def search(events, params)
+    filter = events
+    filter = filter.where(state: params[:event_state]) if params[:event_state].present?
+    filter = filter.where(event_type: params[:event_type]) if params[:event_type].present?
+    filter = filter.where(track: @conference.tracks.find_by(:name => params[:track_name])) if params[:track_name].present?
+
     if params.key?(:term) and not params[:term].empty?
       term = params[:term]
-      sort = params[:q][:s] rescue nil
-      @search = events.ransack(title_cont: term,
+      sort = begin
+               params[:q][:s]
+             rescue
+               nil
+             end
+      @search = filter.ransack(title_cont: term,
                                description_cont: term,
                                abstract_cont: term,
                                track_name_cont: term,
@@ -214,7 +273,7 @@ class EventsController < ApplicationController
                                m: 'or',
                                s: sort)
     else
-      @search = events.ransack(params[:q])
+      @search = filter.ransack(params[:q])
     end
 
     @search.result(distinct: true)
@@ -222,11 +281,11 @@ class EventsController < ApplicationController
 
   def event_params
     params.require(:event).permit(
-      :id, :title, :subtitle, :event_type, :time_slots, :state, :start_time, :public, :language, :abstract, :description, :logo, :track_id, :room_id, :note, :submission_note, :do_not_record, :recording_license,
+      :id, :title, :subtitle, :event_type, :time_slots, :state, :start_time, :public, :language, :abstract, :description, :logo, :track_id, :room_id, :note, :submission_note, :do_not_record, :recording_license, :tech_rider,
       event_attachments_attributes: %i(id title attachment public _destroy),
       ticket_attributes: %i(id remote_ticket_id),
       links_attributes: %i(id title url _destroy),
-      event_people_attributes: %i(id person_id event_role role_state _destroy)
+      event_people_attributes: %i(id person_id event_role role_state notification_subject notification_body _destroy)
     )
   end
 end

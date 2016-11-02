@@ -9,6 +9,6 @@ class Link < ActiveRecord::Base
   }
 
   def to_s
-    "Link: #{self.title}"
+    "#{model_name.human}: #{self.title}"
   end
 end

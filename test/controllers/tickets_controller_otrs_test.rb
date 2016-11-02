@@ -2,13 +2,15 @@ require 'test_helper'
 
 class TicketsControllerTest < ActionController::TestCase
   setup do
-    @event = FactoryGirl.create(:event)
+    @event = create(:event)
     @conference = @event.conference
-    @person = FactoryGirl.create(:person)
-    FactoryGirl.create(:event_person, event: @event, person: @person,
-                                      event_role: "submitter")
-    FactoryGirl.create(:event_person, event: @event, person: @person,
-                                      event_role: "speaker")
+    @person = create(:person)
+    create(:event_person, event: @event,
+                          person: @person,
+                          event_role: 'submitter')
+    create(:event_person, event: @event,
+                          person: @person,
+                          event_role: 'speaker')
 
     @conference.ticket_type = 'otrs'
     @url = 'https://localhost/otrs/'
@@ -20,9 +22,10 @@ class TicketsControllerTest < ActionController::TestCase
     login_as(:admin)
   end
 
-  test "create remote ticket with OTRS" do
+  test 'create remote ticket with OTRS' do
     post :create, event_id: @event.id,
-                  conference_acronym: @conference.acronym, test_only: true
+                  conference_acronym: @conference.acronym,
+                  test_only: true
     # test fails because ?method=get is appended to url
     # assert_redirected_to event_path(assigns('event'))
     assert_response :redirect

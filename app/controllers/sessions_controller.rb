@@ -21,7 +21,7 @@ class SessionsController < ApplicationController
     else
       @user = User.new
       flash[:alert] = t(:error_signing_in)
-      render action: "new"
+      render action: 'new'
     end
   end
 
@@ -36,7 +36,11 @@ class SessionsController < ApplicationController
     if current_user.is_submitter?
       cfp_person_path
     else
-      root_path
+      if params.key?(:return_to)
+        params[:return_to]
+      else
+        root_path
+      end
     end
   end
 
@@ -53,7 +57,7 @@ class SessionsController < ApplicationController
     @user = User.new
     flash[:alert] = t(:error_signing_in)
     # abort processing
-    render action: "new"
+    render action: 'new'
   end
 
   private

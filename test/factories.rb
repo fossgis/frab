@@ -16,23 +16,23 @@ FactoryGirl.define do
   end
 
   trait :admin_role do
-    role "admin"
+    role 'admin'
   end
 
   trait :crew_role do
-    role "crew"
+    role 'crew'
   end
 
   trait :conference_orga_role do
-    role "orga"
+    role 'orga'
   end
 
   trait :conference_coordinator_role do
-    role "coordinator"
+    role 'coordinator'
   end
 
   trait :conference_reviewer_role do
-    role "reviewer"
+    role 'reviewer'
   end
 
   trait :three_days do
@@ -75,10 +75,26 @@ FactoryGirl.define do
     end
   end
 
+  trait :with_parent_conference do
+    after :create do |conference|
+      unless conference.subs.any?
+        conference.parent = create(:three_day_conference_with_events, title: "#{conference.title} parent")
+      end
+    end
+  end
+
+  trait :with_sub_conference do
+    after :create do |conference|
+      if conference.main_conference?
+        create(:conference, parent: conference, title: "#{conference.title} sub")
+      end
+    end
+  end
+
   factory :user do
     person
     email { generate(:email) }
-    password "frab23"
+    password 'frab23'
     password_confirmation { password }
     sign_in_count 0
     confirmed_at { Time.now }
@@ -108,7 +124,14 @@ FactoryGirl.define do
 
   factory :person do
     email { generate(:email) }
-    public_name "Fred Besen"
+    public_name 'Fred Besen'
+  end
+
+  factory :expense do
+    name 'Kiste Bier'
+    value 22.5
+    person
+    conference
   end
 
   factory :day do
@@ -118,21 +141,24 @@ FactoryGirl.define do
 
   factory :room do
     name { generate(:room_names) }
-    public true
   end
 
   factory :conference do
-    title "FrabCon"
+    title 'FrabCon'
     acronym { generate(:conference_acronym) }
     timeslot_duration 15
     default_timeslots 4
     max_timeslots 20
     feedback_enabled true
+    expenses_enabled true
+    transport_needs_enabled true
     schedule_public true
-    timezone "Berlin"
+    timezone 'Berlin'
+    parent nil
 
-    factory :three_day_conference, traits: [:three_days]
-    factory :three_day_conference_with_events, traits: [:three_days, :with_rooms, :with_events]
+    factory :three_day_conference, traits: [:three_days, :with_sub_conference]
+    factory :three_day_conference_with_events, traits: [:three_days, :with_rooms, :with_events, :with_sub_conference]
+    factory :sub_conference_with_events, traits: [:with_rooms, :with_events, :with_parent_conference]
   end
 
   factory :call_for_participation do
@@ -142,11 +168,13 @@ FactoryGirl.define do
   end
 
   factory :notification do
-    reject_body "reject body text"
-    reject_subject "rejected subject"
-    accept_body "accept body text"
-    accept_subject "accepted subject"
-    locale "en"
+    reject_body 'reject body text'
+    reject_subject 'rejected subject'
+    accept_body 'accept body text'
+    accept_subject 'accepted subject'
+    schedule_body 'schedule body text'
+    schedule_subject 'schedule subject'
+    locale 'en'
     conference
   end
 
@@ -159,43 +187,54 @@ FactoryGirl.define do
   end
 
   factory :language do
-    code "EN"
+    code 'EN'
 
     factory :english_language do
     end
     factory :german_language do
-      code "DE"
+      code 'DE'
     end
   end
 
   factory :event do
     title { generate(:event_title) }
-    subtitle "Getting started organizing your conference"
+    subtitle 'Getting started organizing your conference'
     time_slots 4
-    start_time "10:00"
+    start_time '10:00'
     conference { create(:three_day_conference) }
   end
 
   factory :event_person do
     person
     event
-    event_role "speaker"
+    event_role 'speaker'
+
+    factory :confirmed_event_person do
+      role_state 'confirmed'
+    end
   end
 
   factory :event_rating do
     event
     person
     rating 3.0
-    comment "blah"
+    comment 'blah'
   end
 
   factory :event_feedback do
     rating 3.0
-    comment "doh"
+    comment 'doh'
   end
 
   factory :ticket do
     event
-    remote_ticket_id "1234"
+    remote_ticket_id '1234'
+  end
+
+  factory :mail_template do
+    conference
+    name 'template one'
+    subject 'subject one'
+    content '|first_name #first_name| |last_name #last_name| |public_name #public_name|'
   end
 end

@@ -4,7 +4,7 @@ class Day < ActiveRecord::Base
   belongs_to :conference
   has_many :availabilities
 
-  has_paper_trail meta: { associated_id: :conference_id, associated_type: "Conference" }
+  has_paper_trail meta: { associated_id: :conference_id, associated_type: 'Conference' }
 
   default_scope { order(start_date: :asc) }
 
@@ -14,7 +14,7 @@ class Day < ActiveRecord::Base
   validate :does_not_overlap
 
   def start_date_before_end_date
-    self.errors.add(:end_date, "should be after start date") if self.start_date >= self.end_date
+    self.errors.add(:end_date, 'should be after start date') if self.start_date >= self.end_date
   end
 
   def does_not_overlap
@@ -26,14 +26,18 @@ class Day < ActiveRecord::Base
     }
   end
 
-  def start_times
+  def start_times_map
     times = []
     time = start_date
     while time <= end_date
-      times << I18n.l(time, format: :pretty_datetime)
+      times << yield(time, I18n.l(time, format: :pretty_datetime))
       time = time.since(conference.timeslot_duration.minutes)
     end
     times
+  end
+
+  def start_times
+    start_times_map { |time, pretty| pretty }
   end
 
   def label
@@ -56,6 +60,6 @@ class Day < ActiveRecord::Base
   end
 
   def to_s
-    "Day: #{self.label}"
+    "#{model_name.human}: #{self.label}"
   end
 end

@@ -2,6 +2,7 @@ en:
   time:
     formats:
       time: "%H:%M"
+      day: "%A"
 
   public:
     schedule:
@@ -10,15 +11,16 @@ en:
       nav:
         day: "Day %{index}"
         events: "Events"
-        index: "Index"
+        index: "Overview"
         schedule: "Schedule"
         speakers: "Speakers"
+        qrcode: "QR-Code"
 
       index:
         day: "Day %{index} – %{label}"
         events: "Events"
         schedule: "Schedule – %{label}"
-        schedule_index: "Schedule index"
+        schedule_index: "Schedule overview"
         speakers: "Speakers"
 
       day:
@@ -57,6 +59,11 @@ en:
         events_in_this_conference: "Events in this conference"
         links: "Links"
         speaker: "Speaker"
+
+      qrcode:
+        link_to_public_schedule: |
+          This QR code contains the URL to the machine-readable version of the public schedule file.
+          Scan it with an application such as Giggity or BarfBag to import the schedule for this conference.
 
     feedback:
       new:

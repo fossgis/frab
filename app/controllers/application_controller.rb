@@ -2,6 +2,7 @@ class ApplicationController < ActionController::Base
   protect_from_forgery
 
   before_action :set_locale
+  before_filter :set_paper_trail_whodunnit
   prepend_before_filter :load_conference
 
   helper_method :current_user
@@ -10,9 +11,9 @@ class ApplicationController < ActionController::Base
     Rails.logger.info "[ !!! ] Access Denied for #{current_user.email}/#{current_user.id}/#{current_user.role}: #{ex.message}"
     begin
       if current_user.is_submitter?
-        redirect_to cfp_root_path, :notice => t(:"ability.denied")
+        redirect_to cfp_root_path, notice: t(:"ability.denied")
       else
-        redirect_to :back, :notice => t(:"ability.denied")
+        redirect_to :back, notice: t(:"ability.denied")
       end
     rescue ActionController::RedirectBackError
       redirect_to root_path
@@ -39,7 +40,7 @@ class ApplicationController < ActionController::Base
   def load_conference
     if params[:conference_acronym]
       @conference = Conference.find_by_acronym(params[:conference_acronym])
-      fail ActionController::RoutingError.new("Not found") unless @conference
+      fail ActionController::RoutingError.new('Not found') unless @conference
     elsif session.key?(:conference_acronym)
       @conference = Conference.find_by_acronym(session[:conference_acronym])
     elsif Conference.count > 0
@@ -81,7 +82,7 @@ class ApplicationController < ActionController::Base
 
   def not_submitter!
     return unless current_user
-    redirect_to cfp_root_path, alert: "This action is not allowed" if current_user.is_submitter?
+    redirect_to cfp_root_path, alert: 'This action is not allowed' if current_user.is_submitter?
   end
 
   def login_as(user)
@@ -94,7 +95,11 @@ class ApplicationController < ActionController::Base
     if request.path =~ /\/cfp/
       new_cfp_session_path
     else
-      new_session_path
+      if request.get?
+        new_session_path(return_to: request.path)
+      else
+        new_session_path
+      end
     end
   end
 

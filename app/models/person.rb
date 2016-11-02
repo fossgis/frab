@@ -1,5 +1,5 @@
 class Person < ActiveRecord::Base
-  GENDERS = %w(male female other)
+  GENDERS = %w(male female other).freeze
 
   has_many :availabilities, dependent: :destroy
   has_many :event_people, dependent: :destroy
@@ -9,12 +9,17 @@ class Person < ActiveRecord::Base
   has_many :languages, as: :attachable, dependent: :destroy
   has_many :links, as: :linkable, dependent: :destroy
   has_many :phone_numbers, dependent: :destroy
+  has_many :expenses, dependent: :destroy
+  has_many :transport_needs, dependent: :destroy
+  has_one :ticket, as: :object, dependent: :destroy
 
   accepts_nested_attributes_for :availabilities, reject_if: :all_blank
   accepts_nested_attributes_for :im_accounts, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :languages, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :links, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :phone_numbers, reject_if: :all_blank, allow_destroy: true
+  accepts_nested_attributes_for :expenses, reject_if: :all_blank, allow_destroy: true
+  accepts_nested_attributes_for :ticket, reject_if: :all_blank, allow_destroy: true
 
   belongs_to :user, dependent: :destroy
 
@@ -23,8 +28,8 @@ class Person < ActiveRecord::Base
   has_paper_trail
 
   has_attached_file :avatar,
-    styles: { tiny: "16x16>", small: "32x32>", large: "128x128>" },
-    default_url: "person_:style.png"
+    styles: { tiny: '16x16>', small: '32x32>', large: '128x128>' },
+    default_url: 'person_:style.png'
 
   validates_attachment_content_type :avatar, content_type: [/jpg/, /jpeg/, /png/, /gif/]
 
@@ -33,17 +38,27 @@ class Person < ActiveRecord::Base
   # validates_inclusion_of :gender, in: GENDERS, allow_nil: true
 
   scope :involved_in, ->(conference) {
-    joins(events: :conference).where(:"conferences.id" => conference.id).group(:"people.id")
+    joins(events: :conference).where('conferences.id': conference).uniq
   }
   scope :speaking_at, ->(conference) {
-    joins(events: :conference).where(:"conferences.id" => conference.id).where(:"event_people.event_role" => %w(speaker moderator)).where(:"events.state" => %w(unconfirmed confirmed)).group("people.id")
+    joins(events: :conference).where('conferences.id': conference).where('event_people.event_role': EventPerson::SPEAKER).where('events.state': Event::ACCEPTED).uniq
   }
   scope :publicly_speaking_at, ->(conference) {
-    joins(events: :conference).where(:"conferences.id" => conference.id).where(:"event_people.event_role" => %w(speaker moderator)).where(:"events.public" => true).where(:"events.state" => %w(unconfirmed confirmed)).group("people.id")
+    joins(events: :conference).where('conferences.id': conference).where('event_people.event_role': EventPerson::SPEAKER).where('events.public': true).where('events.state': Event::ACCEPTED).uniq
   }
   scope :confirmed, ->(conference) {
-    joins(events: :conference).where(:"conferences.id" => conference.id).where(:"events.state" => "confirmed")
+    joins(events: :conference).where('conferences.id': conference).where('events.state': %w(confirmed scheduled))
   }
+
+  def self.fullname_options
+    all.sort_by(&:full_name).map do |p|
+      { id: p.id, text: p.full_name_annotated }
+    end
+  end
+
+  def newer_than?(person)
+    updated_at > person.updated_at
+  end
 
   def full_name
     if first_name.blank? or last_name.blank?
@@ -53,43 +68,49 @@ class Person < ActiveRecord::Base
     end
   end
 
-  def user_email
-    self.user.email if self.user.present?
+  def full_name_annotated
+    full_name + " (#{email}, \##{id})"
   end
 
-  def avatar_path(size = :medium)
-    self.avatar(size) if self.avatar.present?
+  def user_email
+    user.email if user.present?
+  end
+
+  def avatar_path(size = :large)
+    avatar(size) if avatar.present?
   end
 
   def involved_in?(conference)
     found = Person.joins(events: :conference)
-            .where(:"conferences.id" => conference.id)
-            .where(id: self.id).count
-    found > 0
+                  .where('conferences.id': conference.id)
+                  .where(id: id)
+                  .count
+    found.positive?
   end
 
   def active_in_any_conference?
     found = Conference.joins(events: [{ event_people: :person }])
-            .where(Event.arel_table[:state].in(%w(confirmed unconfirmed)))
-            .where(EventPerson.arel_table[:event_role].in(%w(speaker moderator)))
-            .where(Person.arel_table[:id].eq(self.id)).count
-    found > 0
+                      .where(Event.arel_table[:state].in(Event::ACCEPTED))
+                      .where(EventPerson.arel_table[:event_role].in(EventPerson::SPEAKER))
+                      .where(Person.arel_table[:id].eq(id))
+                      .count
+    found.positive?
   end
 
   def events_in(conference)
-    self.events.where(conference_id: conference.id)
+    events.where(conference_id: conference.id)
   end
 
   def events_as_presenter_in(conference)
-    self.events.where(:"event_people.event_role" => %w(speaker moderator), conference_id: conference.id)
+    events.where('event_people.event_role': EventPerson::SPEAKER, conference: conference)
   end
 
   def events_as_presenter_not_in(conference)
-    self.events.where(:"event_people.event_role" => %w(speaker moderator)).where("conference_id != ?", conference.id)
+    events.where('event_people.event_role': EventPerson::SPEAKER).where.not(conference: conference)
   end
 
   def public_and_accepted_events_as_speaker_in(conference)
-    self.events.is_public.accepted.where(:"events.state" => :confirmed, :"event_people.event_role" => %w(speaker moderator), conference_id: conference.id)
+    events.is_public.accepted.where('events.state': %w(confirmed scheduled), 'event_people.event_role': EventPerson::SPEAKER, conference_id: conference)
   end
 
   def role_state(conference)
@@ -104,7 +125,7 @@ class Person < ActiveRecord::Base
   end
 
   def availabilities_in(conference)
-    availabilities = self.availabilities.where(conference_id: conference.id)
+    availabilities = self.availabilities.where(conference: conference)
     availabilities.each { |a|
       a.start_date = a.start_date.in_time_zone
       a.end_date = a.end_date.in_time_zone
@@ -124,11 +145,11 @@ class Person < ActiveRecord::Base
       v['start_date'] = Time.zone.parse(v['start_date'])
       v['end_date'] = Time.zone.parse(v['end_date'])
     }
-    self.update_attributes(params)
+    update_attributes(params)
   end
 
   def average_feedback_as_speaker
-    events = self.event_people.where(event_role: %w(speaker moderator)).map(&:event)
+    events = event_people.where(event_role: EventPerson::SPEAKER).map(&:event)
     feedback = 0.0
     count = 0
     events.each do |event|
@@ -142,23 +163,35 @@ class Person < ActiveRecord::Base
   end
 
   def locale_for_mailing(conference)
-    own_locales = self.languages.all.map { |l| l.code.downcase.to_sym }
+    own_locales = languages.all.map { |l| l.code.downcase.to_sym }
     conference_locales = conference.languages.all.map { |l| l.code.downcase.to_sym }
     return :en if own_locales.include? :en or own_locales.empty? or (own_locales & conference_locales).empty?
     (own_locales & conference_locales).first
   end
 
+  def sum_of_expenses(conference, reimbursed)
+    expenses.where(conference_id: conference.id, reimbursed: reimbursed).sum(:value)
+  end
+
   def to_s
-    "Person: #{self.full_name}"
+    "#{model_name.human}: #{full_name}"
+  end
+
+  def remote_ticket?
+    ticket.present? and ticket.remote_ticket_id.present?
+  end
+
+  def merge_with(doppelgaenger, keep_last_updated = false)
+    MergePersons.new(keep_last_updated).combine!(self, doppelgaenger)
   end
 
   private
 
   def speaker_role_state(conference)
-    self.event_people.select { |ep| ep.event.conference == conference }.select { |ep| %w(speaker moderator).include? ep.event_role }
+    event_people.select { |ep| ep.event.conference == conference }.select { |ep| EventPerson::SPEAKER.include? ep.event_role }
   end
 
   def nilify_empty
-    self.gender = nil if self.gender and self.gender.empty?
+    self.gender = nil if gender and gender.empty?
   end
 end

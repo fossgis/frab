@@ -7,11 +7,9 @@ module Public::ScheduleHelper
 
   def color_dark?(color)
     parts = color.scanf('%02x%02x%02x')
-    logger.info(parts)
     return parts.sum < 384 if parts.length == 3
 
     parts = color.scanf('%01x%01x%01x')
-    logger.info(parts)
     return parts.sum < 24 if parts.length == 3
 
     false
@@ -21,16 +19,20 @@ module Public::ScheduleHelper
     if event.track
       "track-#{event.track.name.parameterize}"
     else
-      "track-default"
+      'track-default'
     end
   end
 
   def different_track_colors?
-    colors = @conference.tracks.map(&:color)
+    colors = @conference.tracks_including_subs.map(&:color)
     colors.uniq.size > 1
   end
 
   def selected(regex)
-    "selected" if request.path =~ regex
+    'selected' if request.path =~ regex
+  end
+
+  def day_selected(index)
+    'selected' if request.path.ends_with?(index.to_s)
   end
 end

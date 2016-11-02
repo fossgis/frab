@@ -3,6 +3,10 @@
  *
  */
 
+article, aside, details, figcaption, figure, footer, header, hgroup, nav, section, summary {
+  display:block;
+}
+
 * { margin: 0; padding: 0; }
 
 body {
@@ -12,8 +16,54 @@ body {
 
 #wrapper { width: 100%; }
 
+#header {
+  background-color: #C7C8C6;
+}
+
 #header h1 {
-  padding: 15px 26px;
+  -x-system-font: none;
+  color: #fff;
+  font-family: sans-serif;
+  font-feature-settings: normal;
+  font-kerning: auto;
+  font-language-override: normal;
+  font-size: 4em;
+  font-size-adjust: none;
+  font-stretch: normal;
+  font-style: normal;
+  font-synthesis: weight style;
+  font-variant-alternates: normal;
+  font-variant-caps: normal;
+  font-variant-east-asian: normal;
+  font-variant-ligatures: normal;
+  font-variant-numeric: normal;
+  font-variant-position: normal;
+  font-weight: 300;
+  line-height: 1em;
+  margin-bottom: 0;
+  margin-left: 20px;
+  margin-right: 0;
+  margin-top: 0;
+  padding-bottom: 5px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 10px;
+}
+
+#navigation p.tracks {
+  padding-top: 20px;
+  padding-bottom: 10px;
+}
+
+#navigation ul.tracks {
+  list-style: none;
+  list-style-type: none;
+}
+
+#navigation ul.tracks li {
+  width: 150px;
+  padding-top: 0;
+  margin-top: 0;
 }
 
 #main-content p.release {
@@ -38,32 +88,32 @@ body {
   margin-left: 20px;
 }
 
-#horizontal-navigation {
+#navigation {
   float: left;
-  padding: 8em 0.7em 1em 2em;
+  padding: 10px 0.7em 1em 2em;
   vertical-align: top;
 }
 
-#horizontal-navigation ul {
+#navigation ul {
   margin: 0;
   min-width: 135px;
 }
 
-#horizontal-navigation ul li {
+#navigation ul li {
   background-color: #E1E1E1;
   border: solid 1px #C7C8C6;
+  padding-top: 5px;
   list-style: none;
   margin: 5px 1px 0 0;
 }
 
-#horizontal-navigation ul li a {
-  color: #666;
-  padding: 10px 25px;
-  text-align: center;
-  display:block;
-  font: bold 12px verdana, sans-serif;
-  text-decoration: none;
-  line-height: 125%;
+#navigation ul li a {
+  text-decoration:none;
+  color:#666;
+  text-align:center;
+  font:400 1.12em/1.4em 'Open Sans', sans-serif;
+  margin:0;
+  border-bottom:5px solid transparent;
 }
 
 .clear {
@@ -78,7 +128,7 @@ body {
   padding-left: 1em;
   height: auto;
   border-style: solid;
-  border-width: 5px 1px 1px;
+  border-width: 1px 1px 1px;
   border-color: #C7C8C6;
   background-color: #FEFEFE;
 }
@@ -242,6 +292,10 @@ h3.title {
   margin-bottom: 30px;
 }
 
+h3 {
+  padding-top: 10px;
+}
+
 .column {
   font-size: 14px;
 }
@@ -284,7 +338,7 @@ p.abstract {
 }
 
 #pagination {
-  text-align: right;
+  margin-bottom: 10px;
 }
 
 .page-button {
@@ -314,7 +368,6 @@ span#pages {
 .column a {
   text-decoration: underline;
 }
-
 
 .event_feedback li.choice {
   display: inline-block;
@@ -353,3 +406,25 @@ dt, dd {
 dt {
   font: bold 12px verdana, sans-serif;
 }
+
+.qr {
+  padding-top: 10px;
+}
+
+.qr table {
+  border-width: 0;
+  border-style: none;
+  border-color: #0000ff;
+  border-collapse: collapse;
+}
+
+.qr table td {
+  border-left: solid 5px #000;
+  padding: 0;
+  margin: 0;
+  width: 0px;
+  height: 5px;
+}
+
+.qr table td.black { border-color: #000; }
+.qr table td.white { border-color: #fff; }

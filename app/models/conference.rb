@@ -1,5 +1,7 @@
 class Conference < ActiveRecord::Base
-  TICKET_TYPES = %w(otrs rt integrated)
+  include ConferenceStatistics
+
+  TICKET_TYPES = %w(otrs rt redmine integrated).freeze
 
   has_many :availabilities, dependent: :destroy
   has_many :conference_users, dependent: :destroy
@@ -10,26 +12,36 @@ class Conference < ActiveRecord::Base
   has_many :rooms, dependent: :destroy
   has_many :tracks, dependent: :destroy
   has_many :conference_exports, dependent: :destroy
+  has_many :mail_templates, dependent: :destroy
+  has_many :transport_needs, dependent: :destroy
+  has_many :subs, class_name: Conference, foreign_key: :parent_id
   has_one :call_for_participation, dependent: :destroy
   has_one :ticket_server, dependent: :destroy
+  belongs_to :parent, class_name: Conference
 
-  accepts_nested_attributes_for :rooms, reject_if: proc { |r| r["name"].blank? }, allow_destroy: true
+  accepts_nested_attributes_for :rooms, reject_if: proc { |r| r['name'].blank? }, allow_destroy: true
   accepts_nested_attributes_for :days, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :notifications, allow_destroy: true
   accepts_nested_attributes_for :tracks, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :languages, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :ticket_server
 
-  validates_presence_of :title,
+  validates :title,
     :acronym,
     :default_timeslots,
     :max_timeslots,
     :timeslot_duration,
-    :timezone
-  validates_inclusion_of :feedback_enabled, :in => [true, false]
-  validates_uniqueness_of :acronym
-  validates_format_of :acronym, with: /\A[a-zA-Z0-9_-]*\z/
+    :timezone, presence: true
+  validates :feedback_enabled,
+    :expenses_enabled,
+    :transport_needs_enabled,
+    :bulk_notification_enabled, inclusion: { in: [true, false] }
+  validates :acronym, uniqueness: true
+  validates :acronym, format: { with: /\A[a-zA-Z0-9_-]*\z/ }
+  validates :color, format: { with: /\A[a-zA-Z0-9]*\z/ }
   validate :days_do_not_overlap
+  validate :subs_dont_allow_days
+  validate :subs_cant_have_subs
 
   after_update :update_timeslots
 
@@ -37,11 +49,11 @@ class Conference < ActiveRecord::Base
 
   scope :has_submission, ->(person) {
     joins(events: [{ event_people: :person }])
-      .where(EventPerson.arel_table[:event_role].in(%w(speaker moderator)))
-      .where(Person.arel_table[:id].eq(person.id)).group(:"conferences.id")
+      .where(EventPerson.arel_table[:event_role].in(EventPerson::SPEAKER))
+      .where(Person.arel_table[:id].eq(person.id)).uniq
   }
 
-  scope :creation_order, -> { order("conferences.created_at DESC") }
+  scope :creation_order, -> { order('conferences.created_at DESC') }
 
   scope :accessible_by_crew, ->(user) {
     joins(:conference_users).where(conference_users: { user_id: user })
@@ -52,7 +64,44 @@ class Conference < ActiveRecord::Base
   }
 
   def self.current
-    self.order("created_at DESC").first
+    order('created_at DESC').first
+  end
+
+  alias own_days days
+
+  def days
+    return parent.days if sub_conference?
+    own_days
+  end
+
+  def timezone
+    return parent.timezone if sub_conference?
+    attributes['timezone']
+  end
+
+  def timeslot_duration
+    return parent.timeslot_duration if sub_conference?
+    attributes['timeslot_duration']
+  end
+
+  def include_subs
+    [self, subs].flatten.uniq
+  end
+
+  def events_including_subs
+    Event.where(conference: include_subs)
+  end
+
+  def rooms_including_subs
+    Room.where(conference: include_subs)
+  end
+
+  def tracks_including_subs
+    Track.where(conference: include_subs)
+  end
+
+  def languages_including_subs
+    Language.where(attachable: include_subs)
   end
 
   def submission_data
@@ -73,85 +122,35 @@ class Conference < ActiveRecord::Base
     result.to_a.sort
   end
 
-  def events_by_state
-    [
-      [[0, self.events.where(state: %w(new review)).count]],
-      [[1, self.events.where(state: %w(unconfirmed confirmed)).count]],
-      [[2, self.events.where(state: "rejected").count]],
-      [[3, self.events.where(state: %w(withdrawn canceled)).count]]
-    ]
-  end
-
-  def events_by_state_and_type(type)
-    [
-      [[0, self.events.where(state: %w(new review), event_type: type).count]],
-      [[1, self.events.where(state: %w(unconfirmed confirmed), event_type: type).count]],
-      [[2, self.events.where(state: "rejected", event_type: type).count]],
-      [[3, self.events.where(state: %w(withdrawn canceled), event_type: type).count]]
-    ]
-  end
-
-  def event_duration_sum(events)
-    durations = events.accepted.map { |e| e.time_slots * self.timeslot_duration }
-    duration_to_time durations.sum
-  end
-
   def export_url
-    "/#{EXPORT_PATH}/#{self.acronym}"
+    "/#{EXPORT_PATH}/#{acronym}"
   end
 
   def conference_export(locale = 'en')
-    ConferenceExport.where(conference_id: self.id, locale: locale).try(:first)
-  end
-
-  def language_breakdown(accepted_only = false)
-    result = []
-    if accepted_only
-      base_relation = self.events.accepted
-    else
-      base_relation = self.events
-    end
-    self.languages.each do |language|
-      result << { label: language.code, data: base_relation.where(language: language.code).count }
-    end
-    result << { label: "unknown", "data" => base_relation.where(language: "").count }
-    result
-  end
-
-  def gender_breakdown(accepted_only = false)
-    result = []
-    ep = Person.joins(events: :conference)
-         .where(:"conferences.id" => self.id)
-         .where(:"event_people.event_role" => %w(speaker moderator))
-         .where(:"events.public" => true)
-
-    ep = ep.where(:"events.state" => "confirmed") if accepted_only
-
-    ep.group(:gender).count.each do |k, v|
-      k = "unknown" if k.nil?
-      result << { label: k, data: v }
-    end
-
-    result
+    ConferenceExport.where(conference_id: id, locale: locale).try(:first)
   end
 
   def language_codes
-    codes = self.languages.map { |l| l.code.downcase }
+    codes = languages.map { |l| l.code.downcase }
     codes = %w(en) if codes.empty?
     codes
   end
 
+  def start_times_by_day
+    days.map { |day| [day.to_s, day.start_times] }
+  end
+
   def first_day
-    self.days.min
+    days.min
   end
 
   def last_day
-    self.days.max
+    days.max
   end
 
   def day_at(date)
     i = 0
-    self.days.each { |day|
+    days.each { |day|
       return i if date.between?(day.start_date, day.end_date)
       i += 1
     }
@@ -160,67 +159,71 @@ class Conference < ActiveRecord::Base
   end
 
   def each_day(&block)
-    self.days.each(&block)
+    days.each(&block)
   end
 
   def in_the_past
-    return false if self.days.nil? or self.days.empty?
-    return false if Time.now < self.days.last.end_date
+    return false if days.nil? or days.empty?
+    return false if Time.now < days.last.end_date
     true
   end
 
   def ticket_server_enabled?
-    return false if self.ticket_type.nil?
-    return false if self.ticket_type == 'integrated'
+    return false if ticket_type.nil?
+    return false if ticket_type == 'integrated'
     true
   end
 
-  # TODO save specify_availability or not to database
-  # for this conference we disable it hard
-  def specify_availability?
-    return false
+  def main_conference?
+    parent.nil?
   end
 
-  def get_ticket_module
-    if self.ticket_type == 'otrs'
-      return OtrsTickets
-    else
-      return RTTickets
-    end
+  def sub_conference?
+    parent.present?
   end
 
   def to_s
-    "Conference: #{self.title} (#{self.acronym})"
+    "#{model_name.human}: #{title} (#{acronym})"
   end
 
   private
 
   def update_timeslots
-    return unless self.timeslot_duration_changed? and self.events.count > 0
-    old_duration = self.timeslot_duration_was
-    factor = old_duration / self.timeslot_duration
-    Event.paper_trail_off!
-    self.events.each do |event|
+    return unless timeslot_duration_changed? and events.count > 0
+    old_duration = timeslot_duration_was
+    factor = old_duration / timeslot_duration
+    Event.paper_trail.disable
+    events_including_subs.each do |event|
       event.update_attributes(time_slots: event.time_slots * factor)
     end
-    Event.paper_trail_on!
+    Event.paper_trail.enable
   end
 
   # if a conference has multiple days, they sould not overlap
   def days_do_not_overlap
-    return if self.days.count < 2
-    days = self.days.sort { |a, b| a.start_date <=> b.start_date }
+    return if days.count < 2
+    days = self.days.sort_by(&:start_date)
     yesterday = days[0]
     days[1..-1].each { |day|
       if day.start_date < yesterday.end_date
-        self.errors.add(:days, "day #{day} overlaps with day before")
+        errors.add(:days, "day #{day} overlaps with day before")
       end
     }
   end
 
-  def duration_to_time(duration_in_minutes)
-    minutes = sprintf("%02d", duration_in_minutes % 60)
-    hours = sprintf("%02d", duration_in_minutes / 60)
-    "#{hours}:#{minutes}h"
+  def subs_dont_allow_days
+    return unless sub_conference?
+    if Day.where(conference: self).any?
+      errors.add(:days, 'are not allowed for conferences with a parent')
+      errors.add(:parent, 'may not be set for conferences with days')
+    end
+  end
+
+  def subs_cant_have_subs
+    return unless sub_conference?
+    if subs.any?
+      errors.add(:subs, 'cannot have sub-conferences and a parent')
+      errors.add(:parent, 'may not be set for conferences with a parent')
+    end
   end
 end
