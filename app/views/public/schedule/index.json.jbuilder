@@ -35,6 +35,7 @@ json.schedule do
             json.abstract event.abstract
             json.description event.description
             json.recording_license event.recording_license
+            json.opensource_license event.opensource_license
             json.do_not_record event.do_not_record
             json.persons event.speakers, :id, :public_name
             json.links event.links do |link|

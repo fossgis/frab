@@ -245,7 +245,10 @@ de:
         abstract: "Abstract"
         description: "Beschreibung"
         state: "Status"
-        submission_note: "Details zur Einreichung"
+        submission_note: "Weitere Informationen zur Einreichung"
+        do_not_record: "Datenschutz"
+        opensource_license: "Veröffentlichung"
+        long_event: "Langer Vortrag"
         tech_rider: "Material"
       link:
         title: "Titel"
