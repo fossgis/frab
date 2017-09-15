@@ -3,8 +3,8 @@
     %legend= t("cfp.basic_information")
     = f.input :title
     = f.input :subtitle
-    = f.input :event_type, collection: translated_options(Event::TYPES)
-    = f.association :track, collection: @conference.tracks
+    = f.input :event_type, collection: translated_options(Event::TYPES), :required => true
+    = f.association :track, collection: @conference.tracks,  :required => true
     = f.input :long_event, as: :inline_boolean, hint: t("cfp.event_long_hint")
     = f.input :opensource_license, as: :inline_boolean, hint:  t("cfp.event_opensource_license")
     = f.input :do_not_record, as: :inline_boolean, hint: t("cfp.event_recording")
@@ -15,8 +15,8 @@
   %hr
   %fieldset.inputs
     %legend= t("cfp.detailed_description")
-    = f.input :description, input_html: {rows: 10}, hint: t("cfp.event_description_hint")
-    = f.input :abstract, input_html: {rows: 4, minlength: 400, maxlength: 560}, hint: t("cfp.event_abstract_hint")
+    = f.input :description, input_html: {rows: 10}, hint: t("cfp.event_description_hint"), :required => true
+    = f.input :abstract, input_html: {rows: 4, minlength: 400, maxlength: 560}, hint: t("cfp.event_abstract_hint"),  :required => true
     = f.input :submission_note, hint: t("cfp.submission_note_hint")
   %hr
   %fieldset.inputs
