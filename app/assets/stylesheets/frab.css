@@ -173,3 +173,7 @@ p.availability span {
   color: red;
   display: inline-block;
 }
+
+.simple_form  .help-block, .help-inline {
+  color: #a0a0a0;
+}

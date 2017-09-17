@@ -26,3 +26,25 @@
 
   .actions
     = f.button :submit, class: 'primary'
+
+
+:javascript
+  $(document).ready(function() {
+    $(".simple_form").submit(function(e) {
+      e.preventDefault();
+      var length = $("#event_abstract").val().length;
+      if (length >= 200 && length <= 560) {
+        this.submit();
+      } else {
+        $(".error_abstract").remove();
+        $(".event_abstract").find('label').append(
+          '<span class="error error_abstract">Bitte mind. Zeichen 200 Beschreibung einfügen.</span>'
+        );
+        // small delay to submit form again
+        setTimeout(function(){
+          $("input[type='submit']").removeAttr('disabled');
+        }, 100);
+
+      }
+    });
+  });
