@@ -168,3 +168,8 @@ p.availability span {
     border-radius: 5px;
     padding: 0.2em;
 }
+
+.simple_form .error {
+  color: red;
+  display: inline-block;
+}
